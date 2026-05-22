@@ -156,10 +156,14 @@ class SpotlightEngine
     protected function applyTotalLimit(Collection $groups, int $totalLimit): Collection
     {
         if ($totalLimit <= 0) {
-            return $groups->map(fn () => collect());
+            /** @var Collection<string, Collection<int, SpotlightResult>> $empty */
+            $empty = $groups->map(fn (): Collection => collect());
+
+            return $empty;
         }
 
         $remaining = $totalLimit;
+        /** @var array<string, Collection<int, SpotlightResult>> $trimmed */
         $trimmed = [];
         foreach ($groups as $key => $results) {
             if ($remaining <= 0) {
