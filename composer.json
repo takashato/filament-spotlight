@@ -1,0 +1,69 @@
+{
+    "name": "takashato/filament-spotlight",
+    "description": "Spotlight-style command palette for Filament v5 — pluggable sources, keyboard-first UX, WCAG 2.1 AA.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "filament",
+        "filament-plugin",
+        "search",
+        "spotlight",
+        "command-palette"
+    ],
+    "authors": [
+        {
+            "name": "takashato",
+            "email": "takashato@rezonia.io"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "filament/filament": "^5.3",
+        "illuminate/contracts": "^13.0|^12.0|^11.0",
+        "illuminate/support": "^13.0|^12.0|^11.0"
+    },
+    "require-dev": {
+        "guzzlehttp/promises": "^2.0",
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "orchestra/testbench": "^11.0|^10.0|^9.0",
+        "pestphp/pest": "^4.0|^3.0",
+        "pestphp/pest-plugin-laravel": "^4.0|^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Takashato\\FilamentSpotlight\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Takashato\\FilamentSpotlight\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Takashato\\FilamentSpotlight\\SpotlightServiceProvider"
+            ],
+            "aliases": {
+                "Spotlight": "Takashato\\FilamentSpotlight\\Facades\\Spotlight"
+            }
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest --parallel",
+        "test:coverage": "vendor/bin/pest --coverage",
+        "lint": "vendor/bin/phpstan analyse",
+        "format": "vendor/bin/pint --dirty",
+        "format:check": "vendor/bin/pint --test"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
