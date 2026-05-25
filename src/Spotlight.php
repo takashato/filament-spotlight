@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Takashato\FilamentSpotlight;
 
 use Illuminate\Contracts\Container\Container;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use Takashato\FilamentSpotlight\Contracts\SpotlightSource;
+use Takashato\FilamentSpotlight\Models\SpotlightRecent;
 
 /**
  * Source registry. Singleton; resolved through the container.
@@ -60,5 +62,53 @@ class Spotlight
     public function flush(): void
     {
         $this->sources = [];
+    }
+
+    /**
+     * Record a visited result for a user. UPSERTs by `(user_id, source_key, result_id)`
+     * and prunes anything beyond the per-user cap.
+     *
+     * SECURITY: callers must pass a server-trusted `$userId` (e.g. `Filament::auth()->id()`).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function recordVisit(int $userId, string $sourceKey, string $resultId, string $title, array $payload = []): void
+    {
+        if ($userId <= 0 || $sourceKey === '' || $resultId === '' || $title === '') {
+            return;
+        }
+
+        SpotlightRecent::query()->updateOrCreate(
+            [
+                'user_id' => $userId,
+                'source_key' => $sourceKey,
+                'result_id' => $resultId,
+            ],
+            [
+                'title' => $title,
+                'payload' => $payload,
+                'visited_at' => Carbon::now(),
+            ],
+        );
+
+        $cap = (int) (config('spotlight.recents.cap_per_user') ?? 50);
+        if ($cap <= 0) {
+            return;
+        }
+
+        $cutoff = SpotlightRecent::query()
+            ->where('user_id', $userId)
+            ->orderByDesc('visited_at')
+            ->orderByDesc('id')
+            ->skip($cap)
+            ->take(1)
+            ->value('visited_at');
+
+        if ($cutoff !== null) {
+            SpotlightRecent::query()
+                ->where('user_id', $userId)
+                ->where('visited_at', '<=', $cutoff)
+                ->delete();
+        }
     }
 }

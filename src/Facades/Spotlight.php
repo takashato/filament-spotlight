@@ -12,6 +12,7 @@ use Takashato\FilamentSpotlight\Contracts\SpotlightSource;
  * @method static \Takashato\FilamentSpotlight\Spotlight registerSource(string|SpotlightSource $source)
  * @method static Collection<int, SpotlightSource> sources()
  * @method static void flush()
+ * @method static void recordVisit(int $userId, string $sourceKey, string $resultId, string $title, array $payload = [])
  *
  * @see \Takashato\FilamentSpotlight\Spotlight
  */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Takashato\FilamentSpotlight;
 
+use Filament\Facades\Filament;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Promise\Utils as PromiseUtils;
 use Illuminate\Contracts\Container\Container;
@@ -11,6 +12,7 @@ use Illuminate\Support\Collection;
 use Takashato\FilamentSpotlight\Contracts\AsyncSpotlightSource;
 use Takashato\FilamentSpotlight\Contracts\SpotlightResult;
 use Takashato\FilamentSpotlight\Contracts\SpotlightSource;
+use Takashato\FilamentSpotlight\Recents\RecentsContributor;
 use Throwable;
 
 /**
@@ -89,11 +91,78 @@ class SpotlightEngine
         $perSource = $this->perSourceLimit();
         $totalLimit = $limit ?? $this->totalLimit();
 
+        /** @var Collection<string, Collection<int, SpotlightResult>> $groups */
         $groups = $sources->mapWithKeys(fn (SpotlightSource $s): array => [
             $s->key() => $this->runSource(fn () => $s->empty($perSource), $perSource),
         ]);
 
+        $recents = $this->recentsGroup();
+        if ($recents !== null) {
+            /** @var Collection<string, Collection<int, SpotlightResult>> $groups */
+            $groups = collect(['recents' => $recents])->merge($groups);
+        }
+
         return $this->applyTotalLimit($this->dedupe($groups), $totalLimit);
+    }
+
+    /**
+     * @return Collection<int, SpotlightResult>|null
+     */
+    protected function recentsGroup(): ?Collection
+    {
+        if (! (bool) (config('spotlight.recents.enabled') ?? true)) {
+            return null;
+        }
+
+        $userId = $this->resolveAuthUserId();
+        if ($userId === null) {
+            return null;
+        }
+
+        $limit = (int) (config('spotlight.recents.show_in_empty_state') ?? 5);
+        if ($limit <= 0) {
+            return null;
+        }
+
+        try {
+            $contributor = $this->container->make(RecentsContributor::class);
+            $results = $contributor->contribute($userId, $limit);
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $results->isEmpty() ? null : $results;
+    }
+
+    protected function resolveAuthUserId(): ?int
+    {
+        try {
+            if (class_exists(Filament::class)) {
+                $id = Filament::auth()->id();
+                if (is_int($id) && $id > 0) {
+                    return $id;
+                }
+                if (is_string($id) && ctype_digit($id)) {
+                    return (int) $id;
+                }
+            }
+        } catch (Throwable) {
+            // fall through to default guard
+        }
+
+        try {
+            $id = auth()->id();
+            if (is_int($id) && $id > 0) {
+                return $id;
+            }
+            if (is_string($id) && ctype_digit($id)) {
+                return (int) $id;
+            }
+        } catch (Throwable) {
+            return null;
+        }
+
+        return null;
     }
 
     /**

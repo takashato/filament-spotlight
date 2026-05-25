@@ -14,6 +14,7 @@ final readonly class Result implements SpotlightResult
 {
     /**
      * @param  array<string, mixed>  $handler
+     * @param  array<string, mixed>  $payload  Source-specific identifiers used for recents re-validation. Keep small; identifiers only — never raw record data.
      */
     public function __construct(
         public string $id,
@@ -23,7 +24,16 @@ final readonly class Result implements SpotlightResult
         public ?string $subtitle = null,
         public ?string $icon = null,
         public ?string $badge = null,
+        public array $payload = [],
     ) {}
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function payload(): array
+    {
+        return $this->payload;
+    }
 
     public function id(): string
     {

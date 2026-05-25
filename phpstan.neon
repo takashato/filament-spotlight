@@ -6,5 +6,6 @@ parameters:
     paths:
         - src
     excludePaths:
-        - src/Sources/* # phase 3 placeholder references
+        # Public extension point; overridden by sources that adopt RecentsAware.
+        - src/Concerns/HandlesRecents.php
     treatPhpDocTypesAsCertain: false

@@ -1,0 +1,136 @@
+/* Spotlight palette baseline + Phase 6 polish (motion, mobile, RTL, focus). */
+
+[x-cloak] { display: none !important; }
+
+/* Position above Filament's sidebar (z-30) + topbar (z-30) + sidebar overlay (z-40). */
+.spotlight-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    animation: spotlight-fade-in 150ms ease-out;
+}
+
+.spotlight-modal {
+    position: relative;
+    z-index: 10000;
+}
+
+.spotlight-modal mark {
+    background-color: rgb(254 243 199);
+    color: rgb(120 53 15);
+    border-radius: 2px;
+}
+
+.dark .spotlight-modal mark {
+    background-color: rgb(120 53 15 / 0.4);
+    color: rgb(254 243 199);
+}
+
+.spotlight-modal kbd {
+    font-family: inherit;
+    font-size: inherit;
+    padding: 0 4px;
+    border-radius: 4px;
+    background-color: rgb(243 244 246);
+    color: rgb(75 85 99);
+}
+
+.dark .spotlight-modal kbd {
+    background-color: rgb(255 255 255 / 0.06);
+    color: rgb(156 163 175);
+}
+
+/* Search input: kill the host-theme focus ring so the modal frame is the only border. */
+.spotlight-input,
+.spotlight-input:focus,
+.spotlight-input:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border: 0 !important;
+}
+
+/* Active row — applies to both keyboard-driven and mouse-driven highlight.
+   Stronger visual than hover so keyboard navigation reads at a glance. */
+.spotlight-result-active {
+    position: relative;
+}
+
+.spotlight-result-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    border-radius: 2px;
+    background-color: var(--primary-500, currentColor);
+}
+
+/* WCAG 2.4.7 — keyboard focus must be visible. */
+.spotlight-result:focus-visible,
+.spotlight-trigger:focus-visible {
+    outline: 2px solid var(--primary-500, currentColor);
+    outline-offset: 2px;
+}
+
+/* WCAG 2.5.5 — interactive targets ≥ 44×44 (mobile). */
+@media (max-width: 767px) {
+    .spotlight-result {
+        min-height: 44px;
+    }
+}
+
+@keyframes spotlight-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Mobile sheet: full-height bottomless modal with iOS-safe input sizing. */
+@media (max-width: 767px) {
+    .spotlight-overlay {
+        padding: 0;
+        align-items: stretch;
+        padding-top: 0;
+    }
+
+    .spotlight-modal {
+        max-width: 100%;
+        height: 100vh;            /* fallback for older Safari */
+        height: 100dvh;           /* dynamic viewport excludes URL bar */
+        border-radius: 0;
+        max-width: 100%;
+    }
+
+    /* Prevent iOS Safari auto-zoom on focus by ensuring ≥ 16px font. */
+    .spotlight-input {
+        font-size: 16px;
+    }
+}
+
+/* RTL: directional icons flip. Keyboard hint arrows / chevrons live under .spotlight-arrow-icon. */
+[dir="rtl"] .spotlight-arrow-icon {
+    transform: rotate(180deg);
+}
+
+/* WCAG 2.3.3 — respect prefers-reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+    .spotlight-overlay,
+    .spotlight-modal {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* Tailwind ships `.sr-only` but we depend on it being present. Provide a safe fallback. */
+.spotlight-root .sr-only,
+.spotlight-modal .sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}

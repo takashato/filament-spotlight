@@ -6,10 +6,15 @@ namespace Takashato\FilamentSpotlight;
 
 use Filament\Contracts\Plugin;
 use Filament\Panel;
+use Filament\Support\Facades\FilamentAsset;
+use Takashato\FilamentSpotlight\Concerns\RegistersRenderHooks;
 use Takashato\FilamentSpotlight\Contracts\SpotlightSource;
+use Takashato\FilamentSpotlight\Support\KeyBindingParser;
 
 class SpotlightPlugin implements Plugin
 {
+    use RegistersRenderHooks;
+
     /**
      * @var array<int, class-string<SpotlightSource>|SpotlightSource>
      */
@@ -87,7 +92,18 @@ class SpotlightPlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        // No-op in Phase 1/2. Sources, livewire components, render hooks register in Phase 3+.
+        // Render hooks register here (panel-specific). Source + asset registration
+        // happens in boot() so that config + Livewire are fully booted first.
+        $this->registerRenderHooks();
+
+        if ($this->shouldOverrideFilamentShortcut()) {
+            // Suppress Filament's built-in global search entirely so Spotlight
+            // owns both the Cmd+K binding AND the topbar trigger pill.
+            // `globalSearch(false)` removes the pill; `globalSearchKeyBindings([])`
+            // belt-and-braces the keyboard binding for older Filament versions.
+            $panel->globalSearch(false);
+            $panel->globalSearchKeyBindings([]);
+        }
     }
 
     public function boot(Panel $panel): void
@@ -120,5 +136,38 @@ class SpotlightPlugin implements Plugin
                 $registry->registerSource($class);
             }
         }
+
+        // Livewire component + JS asset registration both live in
+        // SpotlightServiceProvider::boot() so they resolve outside panel context
+        // (Livewire's /livewire/update endpoint never boots the panel).
+
+        // Resolve the active key binding. When `override_filament=false`, prefer the
+        // configured fallback so Spotlight + Filament's Cmd+K can coexist.
+        $rawShortcut = $this->shouldOverrideFilamentShortcut()
+            ? (string) config('spotlight.shortcut.keys', 'mod+k')
+            : (string) config('spotlight.shortcut.fallback', 'mod+shift+k');
+
+        FilamentAsset::registerScriptData([
+            'spotlightConfig' => [
+                'shortcut' => [
+                    'keys' => $rawShortcut,
+                    'binding' => KeyBindingParser::parse($rawShortcut),
+                ],
+                'debounceMs' => (int) config('spotlight.debounce_ms', 200),
+                'announcements' => [
+                    'opened' => __('spotlight::accessibility.palette_opened'),
+                    'closed' => __('spotlight::accessibility.palette_closed'),
+                    'summary' => __('spotlight::accessibility.results_summary'),
+                    'singular' => __('spotlight::accessibility.results_summary_singular'),
+                    'empty' => __('spotlight::accessibility.results_empty'),
+                    'loading' => __('spotlight::accessibility.loading'),
+                ],
+            ],
+        ]);
+    }
+
+    protected function shouldOverrideFilamentShortcut(): bool
+    {
+        return (bool) config('spotlight.shortcut.override_filament', true);
     }
 }

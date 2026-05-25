@@ -1,0 +1,77 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Takashato\FilamentSpotlight\Tests\Fixtures;
+
+use Filament\GlobalSearch\GlobalSearchResult;
+use Filament\Resources\Resource;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
+
+/**
+ * Test fixture: a Filament resource that bypasses panel-coupled checks and
+ * returns controllable global-search results. Static state is mutable so tests
+ * can flip permission and adjust results per scenario.
+ */
+class FakeFilamentResource extends Resource
+{
+    protected static ?string $model = null;
+
+    public static bool $canSearch = true;
+
+    /** @var array<int, array{title: string, url: string, details?: array<string, string>}> */
+    public static array $rows = [];
+
+    public static ?string $navigationLabel = 'Fake';
+
+    public static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cube';
+
+    public static function reset(): void
+    {
+        self::$canSearch = true;
+        self::$rows = [];
+        self::$navigationLabel = 'Fake';
+        self::$navigationIcon = 'heroicon-o-cube';
+    }
+
+    public static function canGloballySearch(): bool
+    {
+        return static::$canSearch;
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['title'];
+    }
+
+    public static function getGlobalSearchResults(string $search): Collection
+    {
+        $needle = strtolower($search);
+
+        return collect(static::$rows)
+            ->filter(fn (array $r): bool => str_contains(strtolower($r['title']), $needle))
+            ->map(fn (array $r): GlobalSearchResult => new GlobalSearchResult(
+                title: $r['title'],
+                url: $r['url'],
+                details: $r['details'] ?? [],
+            ))
+            ->values();
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return static::$navigationLabel;
+    }
+
+    public static function getNavigationIcon(): \BackedEnum|Htmlable|string|null
+    {
+        return static::$navigationIcon;
+    }
+
+    public static function getUrl(?string $name = null, array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?Model $tenant = null, bool $shouldGuessMissingParameters = false, ?string $configuration = null): string
+    {
+        return '/fake-resource';
+    }
+}
