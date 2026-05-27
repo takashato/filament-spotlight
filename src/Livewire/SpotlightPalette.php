@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace Takashato\FilamentSpotlight\Livewire;
 
+use Filament\Actions\Action;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
+use Filament\Schemas\Concerns\InteractsWithSchemas;
+use Filament\Schemas\Contracts\HasSchemas;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Takashato\FilamentSpotlight\Contracts\SpotlightResult;
+use Takashato\FilamentSpotlight\Sources\FilamentResourceSource;
 use Takashato\FilamentSpotlight\Spotlight;
 use Takashato\FilamentSpotlight\SpotlightEngine;
 use Throwable;
@@ -25,13 +32,21 @@ use Throwable;
  * - All result fields render through Blade `{{ }}` (escaped); `MatchHighlighter`
  *   output is the only pre-escaped HTML and uses `{!! !!}` deliberately
  */
-class SpotlightPalette extends Component
+class SpotlightPalette extends Component implements HasActions, HasSchemas
 {
+    use InteractsWithActions;
+    use InteractsWithSchemas;
+
     public string $query = '';
 
     public bool $isOpen = false;
 
     public ?string $highlightedId = null;
+
+    /**
+     * @var array<string, array<int, Action>>
+     */
+    protected array $resolvedActionsCache = [];
 
     #[On('open-spotlight')]
     public function open(): void
@@ -39,6 +54,7 @@ class SpotlightPalette extends Component
         $this->isOpen = true;
         $this->query = '';
         $this->highlightedId = null;
+        $this->resolvedActionsCache = [];
     }
 
     #[On('close-spotlight')]
@@ -47,6 +63,77 @@ class SpotlightPalette extends Component
         $this->isOpen = false;
         $this->query = '';
         $this->highlightedId = null;
+        $this->resolvedActionsCache = [];
+    }
+
+    /**
+     * Resolve actions for a focused result row. Caches per-result so repeat
+     * Tab presses don't refetch. Errors swallow into an empty cache entry plus
+     * a Filament toast so the palette stays interactive on broken resources.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function loadActionsForFocused(string $resultId, array $payload = []): void
+    {
+        if ($resultId === '') {
+            return;
+        }
+
+        // Sync the server's notion of which row is highlighted so the submenu's
+        // conditional render in the blade picks up the change. Alpine owns the
+        // visual highlight; Livewire needs an explicit signal to re-render.
+        $this->highlightedId = $resultId;
+
+        if (array_key_exists($resultId, $this->resolvedActionsCache)) {
+            return;
+        }
+
+        if (($payload['kind'] ?? null) !== 'record') {
+            $this->resolvedActionsCache[$resultId] = [];
+
+            return;
+        }
+
+        try {
+            $resolved = app(FilamentResourceSource::class)
+                ->resolveActionsFor($resultId, $payload);
+
+            // Bind each action to this Livewire host so `{{ $action }}` renders
+            // a real action button with working modal/lifecycle wiring.
+            $this->resolvedActionsCache[$resultId] = array_map(
+                fn (Action $action): Action => $this->cacheAction($action),
+                $resolved,
+            );
+        } catch (Throwable) {
+            // Soft failure: cache empty so the submenu shows the empty branch,
+            // and surface a toast so ops sees broken resources without losing
+            // the palette UX. Notifications are translation-key driven (no XSS).
+            $this->resolvedActionsCache[$resultId] = [];
+
+            try {
+                Notification::make()
+                    ->title(__('spotlight::spotlight.actions.error'))
+                    ->danger()
+                    ->send();
+            } catch (Throwable) {
+                // Notification dispatch shouldn't itself break the palette.
+            }
+        }
+    }
+
+    /**
+     * Computed list of currently-focused-row actions. Read by the submenu blade.
+     *
+     * @return array<int, Action>
+     */
+    #[Computed]
+    public function actionsForFocused(): array
+    {
+        if ($this->highlightedId === null) {
+            return [];
+        }
+
+        return $this->resolvedActionsCache[$this->highlightedId] ?? [];
     }
 
     public function updatedQuery(): void

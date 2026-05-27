@@ -9,13 +9,22 @@
     $payload = method_exists($result, 'payload') ? $result->payload() : [];
     $rowKey = $result->sourceKey().'::'.$result->id();
     $rowId = 'spotlight-result-'.$result->sourceKey().'-'.$result->id();
+    $rowTitleId = $rowId.'-title';
+    $hasActions = (bool) ($payload['has_actions'] ?? false);
 @endphp
 
 <li
     id="{{ $rowId }}"
     role="option"
     data-spotlight-row="{{ $rowKey }}"
+    data-spotlight-result-id="{{ $rowKey }}"
+    data-spotlight-has-actions="{{ $hasActions ? '1' : '0' }}"
+    @if ($hasActions)
+        data-spotlight-payload="{{ json_encode($payload, JSON_THROW_ON_ERROR) }}"
+        data-spotlight-title="{{ $result->title() }}"
+    @endif
     :aria-selected="highlightedId === @js($rowKey) ? 'true' : 'false'"
+    @if ($hasActions) :aria-haspopup="'menu'" :aria-expanded="openSubmenuFor === @js($rowKey) ? 'true' : 'false'" @endif
     class="spotlight-result group flex cursor-pointer items-center gap-3 px-4 py-2 text-sm transition"
     :class="highlightedId === @js($rowKey)
         ? 'spotlight-result-active bg-primary-50 text-primary-900 dark:bg-primary-500/15 dark:text-white'
@@ -36,7 +45,7 @@
     @endif
 
     <div class="flex min-w-0 flex-1 items-center gap-2">
-        <span class="truncate">
+        <span id="{{ $rowTitleId }}" class="truncate">
             {{-- ARIA INVARIANT: title is the ONLY field rendered as raw HTML. --}}
             {{-- MatchHighlighter (Phase 3) e()-escapes the source title and wraps --}}
             {{-- matched substrings with <mark>. Anything that bypasses the highlighter --}}
@@ -52,6 +61,17 @@
     @if ($result->badge())
         <span class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-600 dark:bg-white/5 dark:text-gray-400">
             {{ $result->badge() }}
+        </span>
+    @endif
+
+    @if ($hasActions)
+        <span
+            class="hidden items-center gap-1 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 sm:inline-flex dark:border-white/10 dark:text-gray-400"
+            :class="highlightedId === @js($rowKey) ? 'opacity-100' : 'opacity-60'"
+            aria-hidden="true"
+            title="{{ __('spotlight::spotlight.actions.label') }}"
+        >
+            <kbd class="font-sans">{{ __('spotlight::spotlight.actions.tab_hint') }}</kbd>
         </span>
     @endif
 </li>

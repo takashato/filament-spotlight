@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Takashato\FilamentSpotlight\Tests\Fixtures;
 
+use Closure;
+use Filament\Actions\Action;
 use Filament\GlobalSearch\GlobalSearchResult;
 use Filament\Resources\Resource;
 use Illuminate\Contracts\Support\Htmlable;
@@ -21,6 +23,8 @@ class FakeFilamentResource extends Resource
 
     public static bool $canSearch = true;
 
+    public static bool $canView = true;
+
     /** @var array<int, array{title: string, url: string, details?: array<string, string>}> */
     public static array $rows = [];
 
@@ -28,12 +32,53 @@ class FakeFilamentResource extends Resource
 
     public static string|\BackedEnum|null $navigationIcon = 'heroicon-o-cube';
 
+    /** @var Closure(Model): array<int, Action>|null */
+    public static ?Closure $actionsResolver = null;
+
+    public static bool $resolveRecordReturnsRecord = false;
+
     public static function reset(): void
     {
         self::$canSearch = true;
+        self::$canView = true;
         self::$rows = [];
         self::$navigationLabel = 'Fake';
         self::$navigationIcon = 'heroicon-o-cube';
+        self::$actionsResolver = null;
+        self::$resolveRecordReturnsRecord = false;
+    }
+
+    public static function canView(Model $record): bool
+    {
+        return static::$canView;
+    }
+
+    public static function getGlobalSearchResultActions(Model $record): array
+    {
+        if (self::$actionsResolver === null) {
+            return [];
+        }
+
+        return (self::$actionsResolver)($record);
+    }
+
+    public static function resolveRecordRouteBinding(int|string $key, ?Closure $modifyQuery = null): ?Model
+    {
+        if (! self::$resolveRecordReturnsRecord) {
+            return null;
+        }
+
+        // Return a transient anonymous model that satisfies the type contract.
+        $model = new class extends Model
+        {
+            protected $table = 'fake_records';
+
+            public $timestamps = false;
+        };
+
+        $model->forceFill(['id' => $key])->setRawAttributes(['id' => $key], true);
+
+        return $model;
     }
 
     public static function canGloballySearch(): bool

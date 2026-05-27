@@ -16,4 +16,13 @@ return [
 
     'dispatch_invalid' => 'Hành động này không khả dụng.',
     'dispatch_failed' => 'Đã xảy ra lỗi khi mở kết quả này.',
+
+    'actions' => [
+        'label' => 'Hành động',
+        'tab_hint' => 'Tab',
+        'loading' => 'Đang tải hành động…',
+        'empty' => 'Không có hành động.',
+        'error' => 'Không thể tải hành động cho dòng này.',
+        'announce' => ':count hành động cho :title',
+    ],
 ];

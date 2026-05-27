@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Takashato\FilamentSpotlight\Sources;
 
 use Closure;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\GlobalSearch\GlobalSearchResult;
 use Filament\Resources\Resource;
@@ -12,6 +13,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use ReflectionMethod;
 use Takashato\FilamentSpotlight\Contracts\RecentsAware;
 use Takashato\FilamentSpotlight\Contracts\SpotlightResult;
 use Takashato\FilamentSpotlight\Contracts\SpotlightSource;
@@ -33,6 +35,15 @@ class FilamentResourceSource implements RecentsAware, SpotlightSource
 {
     /** @var (Closure(): iterable<int, class-string<\Filament\Resources\Resource>>) */
     private Closure $resourcesResolver;
+
+    /**
+     * Per-instance reflection cache: does the resource override
+     * `getGlobalSearchResultActions()`? Keyed by FQCN; class-global so safe to
+     * cache across requests within an instance.
+     *
+     * @var array<class-string<\Filament\Resources\Resource>, bool>
+     */
+    private array $hasActionsCache = [];
 
     /**
      * @param  (callable(): iterable<int, class-string<\Filament\Resources\Resource>>)|null  $resourcesResolver
@@ -141,22 +152,8 @@ class FilamentResourceSource implements RecentsAware, SpotlightSource
             return $this->resourceShortcutResult($resource);
         }
 
-        $key = $payload['key'] ?? null;
-        if (! is_string($key) && ! is_int($key)) {
-            return null;
-        }
-
-        try {
-            $record = $resource::resolveRecordRouteBinding((string) $key);
-        } catch (Throwable) {
-            return null;
-        }
-
+        $record = $this->resolveRecord($payload);
         if (! $record instanceof Model) {
-            return null;
-        }
-
-        if (! $this->canViewRecord($resource, $record)) {
             return null;
         }
 
@@ -198,6 +195,114 @@ class FilamentResourceSource implements RecentsAware, SpotlightSource
     }
 
     /**
+     * Resolve the Filament action list for a focused result row.
+     *
+     * Pure server-side resolution: returns fresh `Action` instances each call.
+     * Never persisted, never serialized to the client. Authorization mirrors
+     * `validateRecent()` — same record-rebind + view permission gate.
+     *
+     * Action `name` collisions across records would clash inside Filament's
+     * action registry (which keys by name), so each action is renamed to
+     * `spotlight::{$resultId}::{$originalName}` before return.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<int, Action>
+     */
+    public function resolveActionsFor(string $resultId, array $payload): array
+    {
+        if (! (bool) (config('spotlight.sources.'.self::class.'.actions.enabled') ?? true)) {
+            return [];
+        }
+
+        if (($payload['kind'] ?? null) !== 'record') {
+            return [];
+        }
+
+        $resource = $payload['resource'] ?? null;
+        if (! is_string($resource) || ! is_subclass_of($resource, Resource::class)) {
+            return [];
+        }
+
+        $record = $this->resolveRecord($payload);
+        if (! $record instanceof Model) {
+            return [];
+        }
+
+        try {
+            /** @var array<int, mixed> $rawActions */
+            $rawActions = $resource::getGlobalSearchResultActions($record);
+        } catch (Throwable) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rawActions as $action) {
+            try {
+                if (! $action instanceof Action) {
+                    continue;
+                }
+
+                if (! $action->hasRecord()) {
+                    $action->record($record);
+                }
+
+                if (! $action->isVisible()) {
+                    continue;
+                }
+
+                $original = $action->getName();
+                if (! is_string($original) || $original === '') {
+                    continue;
+                }
+
+                $action->name("spotlight::{$resultId}::{$original}");
+                $out[] = $action;
+            } catch (Throwable) {
+                // drop the offending action; never break the whole submenu.
+                continue;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Resource-class validation, route binding, and view-permission check —
+     * shared between `validateRecent()` and `resolveActionsFor()`. Returns
+     * `null` on any failure so callers can short-circuit cleanly.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function resolveRecord(array $payload): ?Model
+    {
+        $resource = $payload['resource'] ?? null;
+        if (! is_string($resource) || ! class_exists($resource) || ! is_subclass_of($resource, Resource::class)) {
+            return null;
+        }
+
+        $key = $payload['key'] ?? null;
+        if (! is_string($key) && ! is_int($key)) {
+            return null;
+        }
+
+        try {
+            $record = $resource::resolveRecordRouteBinding((string) $key);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! $record instanceof Model) {
+            return null;
+        }
+
+        if (! $this->canViewRecord($resource, $record)) {
+            return null;
+        }
+
+        return $record;
+    }
+
+    /**
      * @param  class-string<\Filament\Resources\Resource>  $resource
      */
     protected function canViewRecord(string $resource, Model $record): bool
@@ -215,6 +320,34 @@ class FilamentResourceSource implements RecentsAware, SpotlightSource
         } catch (Throwable) {
             return false;
         }
+    }
+
+    /**
+     * Does the resource override `getGlobalSearchResultActions()`? Used to
+     * suppress the Tab affordance on rows whose resource leaves the default
+     * empty-array implementation in place. Reflection is cached per instance.
+     *
+     * Filament's base `Resource` pulls the method in via the `HasGlobalSearch`
+     * trait. Trait methods report the using class as their declaring class, so
+     * a subclass that does NOT override will resolve `getDeclaringClass()` to
+     * `Resource::class`. Anything else is a deliberate override.
+     *
+     * @param  class-string<\Filament\Resources\Resource>  $resource
+     */
+    protected function resourceHasActions(string $resource): bool
+    {
+        if (array_key_exists($resource, $this->hasActionsCache)) {
+            return $this->hasActionsCache[$resource];
+        }
+
+        if (! (bool) (config('spotlight.sources.'.self::class.'.actions.enabled') ?? true)) {
+            return $this->hasActionsCache[$resource] = false;
+        }
+
+        $reflection = new ReflectionMethod($resource, 'getGlobalSearchResultActions');
+        $declaringClass = $reflection->getDeclaringClass()->getName();
+
+        return $this->hasActionsCache[$resource] = $declaringClass !== Resource::class;
     }
 
     protected function searchableResources(): array
@@ -277,6 +410,9 @@ class FilamentResourceSource implements RecentsAware, SpotlightSource
         ];
         if ($recordKey !== null) {
             $payload['key'] = $recordKey;
+        }
+        if ($this->resourceHasActions($resource)) {
+            $payload['has_actions'] = true;
         }
 
         return new Result(

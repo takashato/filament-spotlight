@@ -63,6 +63,8 @@ function spotlight() {
         previouslyFocused: null,
         binding: parseShortcut(window.spotlightConfig?.shortcut?.keys ?? 'mod+k'),
         resultsAnnouncement: '',
+        openSubmenuFor: null,
+        submenuLoading: false,
         _morphHandler: null,
 
         get highlightedRowDomId() {
@@ -82,6 +84,10 @@ function spotlight() {
             };
             document.addEventListener('livewire:morphed', this._morphHandler);
             document.addEventListener('livewire:update', this._morphHandler);
+
+            // Auto-load per-row actions whenever the highlight changes. Debounce
+            // so arrow-key spamming doesn't fire a request per intermediate row.
+            this.$watch('highlightedId', () => this.scheduleLoadActions());
         },
 
         destroy() {
@@ -102,7 +108,6 @@ function spotlight() {
                 this.ensureHighlight();
             });
         },
-        },
 
         close() {
             if (!this.isOpen) return;
@@ -110,9 +115,22 @@ function spotlight() {
             document.body.style.overflow = '';
             this.highlightedId = null;
             this.resultsAnnouncement = '';
+            this.openSubmenuFor = null;
+            this.submenuLoading = false;
             if (this.previouslyFocused?.focus) {
                 this.previouslyFocused.focus();
             }
+        },
+
+        // Esc: if focus is inside the submenu, return to input; else close palette.
+        handleEscape() {
+            const active = document.activeElement;
+            const inSubmenu = active && active.closest('[data-spotlight-submenu]');
+            if (inSubmenu) {
+                this.returnFocusToInput();
+                return;
+            }
+            this.close();
         },
 
         handleGlobalKey(event) {
@@ -132,7 +150,7 @@ function spotlight() {
             this.isOpen ? this.close() : this.open();
         },
 
-        // ArrowDown / ArrowUp / Enter / Home / End on the search input.
+        // ArrowDown / ArrowUp / Enter / Home / End / Tab on the search input.
         handleListKey(event) {
             if (!this.isOpen) return;
 
@@ -158,7 +176,93 @@ function spotlight() {
                         event.preventDefault();
                     }
                     break;
+                case 'Tab':
+                    if (this.focusFirstSubmenuItem()) {
+                        event.preventDefault();
+                    }
+                    break;
             }
+        },
+
+        // Debounced request to fetch actions for the currently highlighted row.
+        // Fires whenever the highlight changes (keyboard or mouse hover).
+        scheduleLoadActions() {
+            if (this._loadActionsTimer) {
+                clearTimeout(this._loadActionsTimer);
+            }
+            this._loadActionsTimer = setTimeout(() => this.loadActionsForCurrentRow(), 80);
+        },
+
+        loadActionsForCurrentRow() {
+            if (!this.isOpen) return;
+            const row = this.highlightedRowElement();
+            if (!row) return;
+
+            const resultId = row.getAttribute('data-spotlight-result-id');
+            if (!resultId) return;
+            if (this.openSubmenuFor === resultId) return;
+
+            // Read payload only when the row advertises actions. Rows without
+            // actions still need the server-side highlight sync so the submenu
+            // from the previously-highlighted row closes when we move off it.
+            const hasActions = row.getAttribute('data-spotlight-has-actions') === '1';
+            let payload = {};
+            if (hasActions) {
+                const raw = row.getAttribute('data-spotlight-payload');
+                if (raw) {
+                    try { payload = JSON.parse(raw); } catch (_) { payload = {}; }
+                }
+            }
+
+            this.submenuLoading = hasActions;
+            this.openSubmenuFor = resultId;
+            const promise = this.$wire.loadActionsForFocused(resultId, payload);
+            const finish = () => { this.submenuLoading = false; };
+            if (promise && typeof promise.then === 'function') {
+                promise.then(finish).catch(finish);
+            } else {
+                finish();
+            }
+        },
+
+        // Esc from inside the submenu: return focus to the search input so
+        // keyboard nav resumes (highlight + submenu remain visible).
+        returnFocusToInput() {
+            this.$nextTick(() => this.$refs.input?.focus());
+        },
+
+        submenuItems() {
+            const modal = this.$refs.modal;
+            if (!modal) return [];
+            const container = modal.querySelector('[data-spotlight-submenu]');
+            if (!container) return [];
+            return Array.from(container.querySelectorAll(
+                'button:not([disabled]),a[href],[role="menuitem"]'
+            )).filter((el) => el.offsetParent !== null);
+        },
+
+        focusFirstSubmenuItem() {
+            const items = this.submenuItems();
+            if (!items.length) return false;
+            items[0].focus();
+            return true;
+        },
+
+        moveSubmenu(delta) {
+            const items = this.submenuItems();
+            if (!items.length) return;
+            const active = document.activeElement;
+            const current = items.indexOf(active);
+            const len = items.length;
+            const next = current === -1
+                ? (delta > 0 ? 0 : len - 1)
+                : (current + delta + len) % len;
+            items[next].focus();
+        },
+
+        highlightedRowElement() {
+            const rows = this.rowElements();
+            return rows.find((el) => el.getAttribute('data-spotlight-row') === this.highlightedId) ?? null;
         },
 
         rowElements() {

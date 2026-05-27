@@ -27,7 +27,15 @@ return [
      * Phase 3 wires concrete source classes; for now the entries below act as placeholders.
      */
     'sources' => [
-        FilamentResourceSource::class => ['priority' => 100],
+        FilamentResourceSource::class => [
+            'priority' => 100,
+            // Surface Resource::getGlobalSearchResultActions() inside the
+            // palette via Tab. Set false to kill per-row actions globally
+            // (kept as an ops kill-switch for incident response).
+            'actions' => [
+                'enabled' => true,
+            ],
+        ],
         NavigationSource::class => ['priority' => 90],
     ],
 

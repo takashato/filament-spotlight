@@ -113,3 +113,11 @@ expect(json_decode((string) json_encode($directive), true))->toBe($directive);
 ```
 
 If you find yourself needing closures, escape hatches, or instance-bound state in a handler, refactor to either an `event` (with the bare identifier in the payload) or a `url` to a dedicated controller / Filament page that performs the action server-side.
+
+## Filament actions are not handlers
+
+Per-row Filament `Action` objects (the result of `Resource::getGlobalSearchResultActions()`) are surfaced through a separate, server-resolved submenu — not through the handler directive system. Handlers are serializable; `Action` instances are not.
+
+If you want to expose Filament actions on a result row, use `FilamentResourceSource` (already wired). Custom sources cannot attach `Action` instances to results; expose primary behavior via `Handler::url`/`event`/`modal`/`callback`.
+
+See [sources.md → Built-in: Resource Actions](sources.md#built-in-resource-actions) for the action surface.

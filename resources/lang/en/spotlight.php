@@ -20,4 +20,14 @@ return [
     // Surfaced when a server-validated dispatch is rejected (defense-in-depth).
     'dispatch_invalid' => 'That action is not available.',
     'dispatch_failed' => 'Something went wrong opening that result.',
+
+    // Per-row Filament actions submenu (Tab to open).
+    'actions' => [
+        'label' => 'Actions',
+        'tab_hint' => 'Tab',
+        'loading' => 'Loading actions…',
+        'empty' => 'No actions available.',
+        'error' => 'Could not load actions for this row.',
+        'announce' => ':count actions for :title',
+    ],
 ];

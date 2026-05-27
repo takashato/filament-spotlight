@@ -6,7 +6,7 @@
 {{--   - Live region: role=status aria-live=polite, sr-only --}}
 <div
     x-data="spotlight"
-    x-on:keydown.window.escape="close()"
+    x-on:keydown.window.escape="handleEscape()"
     x-on:spotlight-open.window="open()"
     x-on:spotlight-close.window="close()"
     x-on:spotlight:dispatch.window="dispatch($event.detail.directive)"
@@ -83,6 +83,7 @@
                     </div>
 
                     @php($groups = $this->groups)
+                    @php($actionsForFocused = $this->actionsForFocused)
 
                     @if ($groups->flatten(1)->isEmpty())
                         <x-spotlight::empty-state :query="$query" />
@@ -99,6 +100,16 @@
                             @endforeach
                         </div>
                     @endif
+
+                    {{-- Per-row actions submenu — auto-resolves on highlight change --}}
+                    {{-- via $wire.loadActionsForFocused. Tab focuses first action. --}}
+                    @if ($highlightedId !== null && ! empty($actionsForFocused))
+                        <x-spotlight::action-submenu
+                            :actions="$actionsForFocused"
+                            :result-id="$highlightedId"
+                            :result-title="''"
+                        />
+                    @endif
                 </div>
 
                 <div class="hidden items-center justify-between gap-4 border-t border-gray-200 bg-gray-50 px-4 py-2 text-[11px] text-gray-500 sm:flex dark:border-white/10 dark:bg-gray-950/50 dark:text-gray-400">
@@ -112,4 +123,9 @@
             </div>
         </div>
     </template>
+
+    {{-- Filament action lifecycle: modals/forms/confirm dialogs render here. --}}
+    {{-- Placed outside the teleported overlay so the action modal can stack on --}}
+    {{-- top of the palette without fighting its x-trap focus boundary. --}}
+    <x-filament-actions::modals />
 </div>

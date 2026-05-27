@@ -13,6 +13,7 @@ A keyboard-first global search palette for Filament admin panels. Pluggable sour
 - Cmd/Ctrl+K opens a modal palette over any Filament panel page
 - Pluggable `SpotlightSource` contract — wire your own data in under 30 lines
 - Built-in `FilamentResourceSource` brings every resource's global search into the palette
+- Per-row Filament actions surfaced inside the palette via Tab — full action lifecycle (modals, confirms, forms)
 - Built-in `NavigationSource` searches the panel navigation tree (groups, items, child items)
 - Per-user recents with LRU eviction and re-validation against current permissions
 - WCAG 2.1 AA combobox pattern, screen-reader announcements, full keyboard navigation

@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-26
+
+### Added
+
+- `FilamentResourceSource` now surfaces `Resource::getGlobalSearchResultActions()` inside a Tab-activated submenu on the palette. Full Filament action lifecycle works on the palette host: modals, confirmations, forms, and authorization gating fire as they would on a list page.
+- `SpotlightPalette` is now a first-class Filament action host (`HasActions`, `HasSchemas` traits) — `<x-filament-actions::modals />` mounts the action modal stack outside the palette overlay.
+- Result rows whose resource overrides `getGlobalSearchResultActions()` advertise a `Tab` hint and `aria-haspopup="menu"`. Rows without overrides keep their existing behavior.
+- Config flag `spotlight.sources.FilamentResourceSource.actions.enabled` (default `true`) — ops kill-switch for incident response.
+- En + vi translations for `spotlight.actions.{label,tab_hint,loading,empty,error,announce}`.
+
+### Notes
+
+- Resource shortcut rows (empty-state) and recents do not surface actions — the action surface is record-bound only.
+- Custom sources cannot attach Filament actions yet — would require a `Result` DTO change.
+
 ## [1.0.0] - 2026-05-25
 
 First stable release.
@@ -49,5 +64,6 @@ First stable release.
 - PHPStan level 5 clean (Larastan).
 - Pint clean (Laravel preset, `declare_strict_types` enforced).
 
-[Unreleased]: https://github.com/takashato/filament-spotlight/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/takashato/filament-spotlight/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/takashato/filament-spotlight/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/takashato/filament-spotlight/releases/tag/v1.0.0
