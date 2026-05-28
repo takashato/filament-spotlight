@@ -97,12 +97,43 @@ class FakeFilamentResource extends Resource
 
         return collect(static::$rows)
             ->filter(fn (array $r): bool => str_contains(strtolower($r['title']), $needle))
-            ->map(fn (array $r): GlobalSearchResult => new GlobalSearchResult(
-                title: $r['title'],
-                url: $r['url'],
-                details: $r['details'] ?? [],
-            ))
+            ->map(function (array $r): GlobalSearchResult {
+                $record = static::buildSearchRecord($r);
+                $actions = self::$actionsResolver !== null
+                    ? array_map(
+                        fn (Action $action): Action => $action->hasRecord() ? $action : $action->record($record),
+                        (self::$actionsResolver)($record),
+                    )
+                    : [];
+
+                return new GlobalSearchResult(
+                    title: $r['title'],
+                    url: $r['url'],
+                    details: $r['details'] ?? [],
+                    actions: $actions,
+                );
+            })
             ->values();
+    }
+
+    /**
+     * @param  array{title: string, url: string, details?: array<string, string>, key?: int|string}  $row
+     */
+    protected static function buildSearchRecord(array $row): Model
+    {
+        $key = $row['key'] ?? 0;
+        $model = new class extends Model
+        {
+            protected $table = 'fake_records';
+
+            public $timestamps = false;
+
+            protected $primaryKey = 'id';
+        };
+
+        $model->forceFill(['id' => $key]);
+
+        return $model;
     }
 
     public static function getNavigationLabel(): string

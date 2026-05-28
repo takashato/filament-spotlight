@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Filament\Actions\Action;
+use Illuminate\Database\Eloquent\Model;
 use Takashato\FilamentSpotlight\Sources\FilamentResourceSource;
 use Takashato\FilamentSpotlight\Tests\Fixtures\FakeFilamentResource;
 
@@ -87,4 +89,46 @@ it('honors per-resource sub-limit when many resources are searchable', function 
 
     // sub_limit = floor(4 / 1) = 4 — capped per-resource
     expect($results->count())->toBeLessThanOrEqual(4);
+});
+
+it('extracts record key from custom edit-page urls like /users/{key}/edit/account', function (): void {
+    FakeFilamentResource::$rows = [
+        ['title' => 'Alice', 'url' => '/users/42/edit/account'],
+    ];
+
+    $source = new FilamentResourceSource(
+        resourcesResolver: fn (): array => [FakeFilamentResource::class],
+    );
+
+    $payload = $source->search('alice', 5)->first()->payload();
+    expect($payload['key'] ?? null)->toBe('42');
+});
+
+it('prefers record key from action-bound record over url parsing', function (): void {
+    // URL contains nested page slug; the only reliable source is the action's record.
+    FakeFilamentResource::$rows = [
+        ['title' => 'Alice', 'url' => '/users/99/edit/profile'],
+    ];
+    FakeFilamentResource::$actionsResolver = fn (Model $r): array => [
+        Action::make('impersonate')->record(
+            tap(new class extends Model
+            {
+                protected $table = 'fake_users';
+
+                public $timestamps = false;
+
+                public function getRouteKey(): mixed
+                {
+                    return $this->getAttribute('id');
+                }
+            }, fn ($m) => $m->forceFill(['id' => 99]))
+        ),
+    ];
+
+    $source = new FilamentResourceSource(
+        resourcesResolver: fn (): array => [FakeFilamentResource::class],
+    );
+
+    $payload = $source->search('alice', 5)->first()->payload();
+    expect($payload['key'] ?? null)->toBe('99');
 });

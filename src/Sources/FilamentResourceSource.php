@@ -400,7 +400,7 @@ class FilamentResourceSource implements RecentsAware, SpotlightSource
         $modelClass = ResourceMetaResolver::model($resource);
         $badge = $modelClass !== null ? class_basename($modelClass) : class_basename($resource);
 
-        $recordKey = $this->extractRecordKeyFromUrl($url);
+        $recordKey = $this->extractRecordKey($gsr, $url);
         $id = 'resources:'.sha1($resource.'|'.$titleString.'|'.$url);
 
         $payload = [
@@ -428,10 +428,43 @@ class FilamentResourceSource implements RecentsAware, SpotlightSource
     }
 
     /**
-     * Extract a record key from a URL by taking the last numeric or slug segment
-     * before any query string. Filament resource URLs are conventionally
-     * `/resource-slug/{key}` or `/resource-slug/{key}/edit`. Falls back to null
-     * when nothing usable is found — recents will then drop the row.
+     * Extract a record key for a search hit. Filament's `getGlobalSearchResults`
+     * binds the originating record onto each result action, which is the only
+     * authoritative source — URL shapes are customisable per resource (e.g.
+     * `/users/{record}/edit/account`) and can't be parsed reliably.
+     *
+     * Falls back to URL parsing when the result has no actions to inspect.
+     */
+    protected function extractRecordKey(GlobalSearchResult $gsr, string $url): ?string
+    {
+        foreach ($gsr->actions as $action) {
+            try {
+                if (! $action->hasRecord()) {
+                    continue;
+                }
+                $record = $action->getRecord();
+                if (! $record instanceof Model) {
+                    continue;
+                }
+                $key = $record->getRouteKey();
+                if (is_string($key) || is_int($key)) {
+                    return (string) $key;
+                }
+            } catch (Throwable) {
+                // Try the next action; never break key resolution on one bad action.
+                continue;
+            }
+        }
+
+        return $this->extractRecordKeyFromUrl($url);
+    }
+
+    /**
+     * Best-effort fallback when no action carries the record. Walks the URL
+     * looking for a trailing `edit`/`view`/`create` marker; the segment
+     * immediately before it is the record key (matches Filament's
+     * `/resource/{key}/edit[/sub-page]` URL convention). Falls back to the
+     * last path segment when no marker is present.
      */
     protected function extractRecordKeyFromUrl(string $url): ?string
     {
@@ -443,12 +476,19 @@ class FilamentResourceSource implements RecentsAware, SpotlightSource
         if ($segments === []) {
             return null;
         }
-        $tail = end($segments);
-        if (in_array($tail, ['edit', 'view', 'create'], true) && count($segments) >= 2) {
-            $tail = $segments[count($segments) - 2];
+
+        foreach (['edit', 'view', 'create'] as $marker) {
+            $index = array_search($marker, $segments, true);
+            if ($index !== false && $index >= 1) {
+                $candidate = $segments[$index - 1];
+
+                return $candidate !== '' ? $candidate : null;
+            }
         }
 
-        return $tail !== '' ? $tail : null;
+        $tail = end($segments);
+
+        return is_string($tail) && $tail !== '' ? $tail : null;
     }
 
     /**
