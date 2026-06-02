@@ -98,6 +98,22 @@ it('returns namespaced actions when resource provides them', function (): void {
     expect($actions[1]->getName())->toBe('spotlight::row-42::delete');
 });
 
+it('renders resolved actions as borderless link-style buttons', function (): void {
+    FakeFilamentResource::$actionsResolver = fn (Model $r): array => [
+        Action::make('edit'),
+        Action::make('delete'),
+    ];
+
+    $source = new FilamentResourceSource(
+        resourcesResolver: fn (): array => [FakeFilamentResource::class],
+    );
+
+    $actions = $source->resolveActionsFor('row-42', recordPayload());
+
+    expect($actions[0]->isLink())->toBeTrue();
+    expect($actions[1]->isLink())->toBeTrue();
+});
+
 it('filters out hidden actions', function (): void {
     FakeFilamentResource::$actionsResolver = fn (): array => [
         Action::make('visible'),

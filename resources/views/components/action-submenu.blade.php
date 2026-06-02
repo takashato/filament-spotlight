@@ -12,13 +12,13 @@
 
 <div
     x-on:keydown.escape.stop.prevent="returnFocusToInput()"
-    x-on:keydown.tab.prevent="returnFocusToInput()"
+    x-on:keydown.tab.stop.prevent="moveSubmenuTab($event)"
     x-on:keydown.arrow-down.prevent="moveSubmenu(1)"
     x-on:keydown.arrow-up.prevent="moveSubmenu(-1)"
     role="menu"
     @if ($titleId) aria-labelledby="{{ $titleId }}" @endif
     aria-label="{{ __('spotlight::spotlight.actions.label') }}"
-    class="spotlight-submenu border-l-2 border-primary-400/40 bg-gray-50/80 px-3 py-2 dark:border-primary-400/30 dark:bg-white/5"
+    class="spotlight-submenu bg-primary-50/60 pb-2 pl-11 pr-4 pt-0.5 dark:bg-primary-500/10"
     data-spotlight-submenu
 >
     <template x-if="submenuLoading">

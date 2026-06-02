@@ -256,6 +256,11 @@ class FilamentResourceSource implements RecentsAware, SpotlightSource
                 }
 
                 $action->name("spotlight::{$resultId}::{$original}");
+
+                // Render as a borderless link-style button so submenu actions
+                // sit flush in the palette instead of as bordered buttons.
+                $action->link();
+
                 $out[] = $action;
             } catch (Throwable) {
                 // drop the offending action; never break the whole submenu.

@@ -2,6 +2,7 @@
     'sourceKey' => '',
     'results' => collect(),
     'highlightedId' => null,
+    'actionsForFocused' => [],
 ])
 
 @php
@@ -29,9 +30,14 @@
     {{-- listbox flat from an a11y tree perspective. --}}
     <ul role="presentation" class="pb-1">
         @foreach ($results as $result)
+            @php
+                $rowKey = $result->sourceKey().'::'.$result->id();
+                $isHighlighted = $highlightedId === $rowKey;
+            @endphp
             <x-spotlight::result
                 :result="$result"
-                :is-highlighted="$highlightedId === $result->sourceKey().'::'.$result->id()"
+                :is-highlighted="$isHighlighted"
+                :actions="$isHighlighted ? $actionsForFocused : []"
             />
         @endforeach
     </ul>

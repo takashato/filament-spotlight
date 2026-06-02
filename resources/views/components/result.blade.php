@@ -1,6 +1,7 @@
 @props([
     'result' => null,
     'isHighlighted' => false,
+    'actions' => [],
 ])
 
 @php
@@ -75,3 +76,16 @@
         </span>
     @endif
 </li>
+
+{{-- Inline actions submenu: renders directly below the highlighted row so the --}}
+{{-- actions sit under the row's content. Tab focuses the first action. --}}
+@if ($isHighlighted && $hasActions)
+    <li role="presentation" data-spotlight-submenu-row="{{ $rowKey }}">
+        <x-spotlight::action-submenu
+            :actions="$actions"
+            :result-id="$rowKey"
+            :result-title="$result->title()"
+            :title-id="$rowTitleId"
+        />
+    </li>
+@endif

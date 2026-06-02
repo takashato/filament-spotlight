@@ -260,6 +260,28 @@ function spotlight() {
             items[next].focus();
         },
 
+        // Tab cycles through submenu actions; Shift+Tab returns to input.
+        moveSubmenuTab(event) {
+            if (event.shiftKey) {
+                this.returnFocusToInput();
+                return;
+            }
+            const items = this.submenuItems();
+            if (!items.length) {
+                this.returnFocusToInput();
+                return;
+            }
+            const active = document.activeElement;
+            const current = items.indexOf(active);
+            const next = current + 1;
+            if (next >= items.length) {
+                // Wrap back to input after last action
+                this.returnFocusToInput();
+            } else {
+                items[next].focus();
+            }
+        },
+
         highlightedRowElement() {
             const rows = this.rowElements();
             return rows.find((el) => el.getAttribute('data-spotlight-row') === this.highlightedId) ?? null;
