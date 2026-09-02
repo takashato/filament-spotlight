@@ -110,3 +110,15 @@ it('uses dynamic viewport height with a fallback for the mobile sheet', function
     expect($css)->toContain('height: 100vh');
     expect($css)->toContain('height: 100dvh');
 });
+
+it('renders a named mobile close button wired to alpine close', function (): void {
+    $view = spotlightView('livewire/palette.blade.php');
+
+    expect($view)->toContain('type="button"');
+    expect($view)->toContain('x-on:click="close()"');
+    expect($view)->toContain('md:hidden');
+    expect($view)->toContain("__('spotlight::spotlight.close_label')");
+    expect($view)->toContain('heroicon-o-x-mark');
+    expect($view)->toContain('h-11');
+    expect($view)->toContain('w-11');
+});

@@ -10,6 +10,7 @@ return [
     'footer_open' => 'mở',
     'footer_next_group' => 'nhóm kế',
     'footer_close' => 'đóng',
+    'close_label' => 'Đóng bảng tìm kiếm',
 
     'empty_no_query' => 'Nhập từ khoá để bắt đầu tìm.',
     'empty_no_results' => 'Không tìm thấy kết quả cho ":query".',
