@@ -62,8 +62,20 @@
                         aria-autocomplete="list"
                         aria-label="{{ __('spotlight::spotlight.search_placeholder') }}"
                         :aria-activedescendant="highlightedRowDomId"
-                        class="spotlight-input h-11 w-full border-0 bg-transparent text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-0 dark:text-white dark:placeholder-gray-500"
+                        class="spotlight-input h-11 min-w-0 flex-1 border-0 bg-transparent text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-0 focus:border-0 dark:text-white dark:placeholder-gray-500"
                     />
+                    <button
+                        type="button"
+                        x-on:click="close()"
+                        class="spotlight-close md:hidden inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-gray-400 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:text-gray-500 dark:hover:text-gray-200"
+                        aria-label="{{ __('spotlight::spotlight.close_label') }}"
+                    >
+                        <x-filament::icon
+                            icon="heroicon-o-x-mark"
+                            class="h-5 w-5"
+                            aria-hidden="true"
+                        />
+                    </button>
                     <kbd class="hidden text-[11px] font-medium text-gray-400 sm:block dark:text-gray-500">
                         ESC
                     </kbd>

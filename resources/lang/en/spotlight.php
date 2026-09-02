@@ -12,6 +12,7 @@ return [
     'footer_open' => 'open',
     'footer_next_group' => 'next group',
     'footer_close' => 'close',
+    'close_label' => 'Close search palette',
 
     // Empty / error states.
     'empty_no_query' => 'Start typing to search.',

@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Mobile palette sheet now shows a labeled close button (44px, `md:hidden`) that calls the existing Alpine `close()`. Search input uses `min-w-0 flex-1` so the control is not clipped by the overflow-hidden modal.
+
 ## [1.1.0] - 2026-05-26
 
 ### Added
