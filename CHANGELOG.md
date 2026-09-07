@@ -6,38 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-### Added
+## [0.1.0] - 2026-09-07
 
-- Mobile palette sheet now shows a labeled close button (44px, `md:hidden`) that calls the existing Alpine `close()`. Search input uses `min-w-0 flex-1` so the control is not clipped by the overflow-hidden modal.
-
-## [1.1.0] - 2026-05-26
+First public release.
 
 ### Added
 
-- `FilamentResourceSource` now surfaces `Resource::getGlobalSearchResultActions()` inside a Tab-activated submenu on the palette. Full Filament action lifecycle works on the palette host: modals, confirmations, forms, and authorization gating fire as they would on a list page.
-- `SpotlightPalette` is now a first-class Filament action host (`HasActions`, `HasSchemas` traits) — `<x-filament-actions::modals />` mounts the action modal stack outside the palette overlay.
-- Result rows whose resource overrides `getGlobalSearchResultActions()` advertise a `Tab` hint and `aria-haspopup="menu"`. Rows without overrides keep their existing behavior.
-- Config flag `spotlight.sources.FilamentResourceSource.actions.enabled` (default `true`) — ops kill-switch for incident response.
-- En + vi translations for `spotlight.actions.{label,tab_hint,loading,empty,error,announce}`.
-
-### Notes
-
-- Resource shortcut rows (empty-state) and recents do not surface actions — the action surface is record-bound only.
-- Custom sources cannot attach Filament actions yet — would require a `Result` DTO change.
-
-## [1.0.0] - 2026-05-25
-
-First stable release.
-
-### Added
-
-- Pluggable `SpotlightSource` contract with five lifecycle methods (`key`, `label`, `icon`, `priority`, `isEnabled`, `search`, `empty`).
+- Pluggable `SpotlightSource` contract with lifecycle methods (`key`, `label`, `icon`, `priority`, `isEnabled`, `search`, `empty`).
 - `SpotlightResult` contract + `Result` DTO with `id`, `title`, `sourceKey`, `handler`, and optional `subtitle`, `icon`, `badge`, `payload`.
 - `Handler` factory for the four serializable directive types: `url`, `event`, `modal`, `callback`.
 - `Spotlight` registry with class-string and instance registration paths, dedupe by source key, priority sort, and disabled-source filtering.
 - `SpotlightEngine` with parallel source execution, per-source timeout, total-result cap, and recents merge for the empty state.
 - `SpotlightPlugin` Filament v5 plugin with `withSources()`, `maxResultsPerSource()`, `totalResultLimit()`, `debounceMs()` builder methods. Integrates via `$panel->plugin(SpotlightPlugin::make())`.
 - Built-in `FilamentResourceSource` bridging existing `Resource::canGloballySearch()` + `getGloballySearchableAttributes()`. No per-resource code required.
+- `FilamentResourceSource` surfaces `Resource::getGlobalSearchResultActions()` inside a Tab-activated submenu on the palette. Full Filament action lifecycle works on the palette host: modals, confirmations, forms, and authorization gating fire as they would on a list page.
+- `SpotlightPalette` is a first-class Filament action host (`HasActions`, `HasSchemas` traits) — `<x-filament-actions::modals />` mounts the action modal stack outside the palette overlay.
+- Result rows whose resource overrides `getGlobalSearchResultActions()` advertise a `Tab` hint and `aria-haspopup="menu"`. Rows without overrides keep their existing behavior.
+- Config flag `spotlight.sources.FilamentResourceSource.actions.enabled` (default `true`) — ops kill-switch for incident response.
+- En + vi translations for `spotlight.actions.{label,tab_hint,loading,empty,error,announce}`.
 - Built-in `NavigationSource` searching the Filament panel navigation tree. Honors `visible()` and DFSes child items.
 - `NavigationFlattener` with per-panel request-cache and visibility filter.
 - `SpotlightPalette` Livewire component implementing the WAI-ARIA combobox pattern.
@@ -49,9 +35,15 @@ First stable release.
 - WCAG 2.1 AA combobox pattern: managed focus, aria-live result announcements, full keyboard navigation (arrows, Home, End, Enter, Escape).
 - Dark mode and RTL parity across all rendered components.
 - Mobile responsive layout switching to a bottom-sheet at the configured Tailwind breakpoint.
+- Mobile palette sheet labeled close button (44px, `md:hidden`) that calls Alpine `close()`. Search input uses `min-w-0 flex-1` so the control is not clipped by the overflow-hidden modal.
 - Vietnamese (`vi`) and English (`en`) translations across `accessibility`, `recents`, `sources`, `spotlight` namespaces.
 - Async source contract `AsyncSpotlightSource` returning Guzzle promises for parallel external fetches.
 - Configuration file with shortcut, limits, debounce, source map, recents, mobile-breakpoint settings; publishable via `php artisan vendor:publish --tag=spotlight-config`.
+
+### Notes
+
+- Resource shortcut rows (empty-state) and recents do not surface actions — the action surface is record-bound only.
+- Custom sources cannot attach Filament actions yet — would require a `Result` DTO change.
 
 ### Security
 
@@ -68,6 +60,5 @@ First stable release.
 - PHPStan level 5 clean (Larastan).
 - Pint clean (Laravel preset, `declare_strict_types` enforced).
 
-[Unreleased]: https://github.com/takashato/filament-spotlight/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/takashato/filament-spotlight/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/takashato/filament-spotlight/releases/tag/v1.0.0
+[Unreleased]: https://github.com/takashato/filament-spotlight/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/takashato/filament-spotlight/releases/tag/v0.1.0

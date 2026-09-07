@@ -91,7 +91,7 @@ Output:
 ]
 ```
 
-This directive is the contract that v1.1 `CommandSource` will consume. In v1.0 it is shipped, validated, and round-trips through recents — but no built-in source ships handler logic for callbacks. Custom sources may consume it today by listening for `spotlight:source-callback` in their own Livewire component.
+This directive is shipped, validated, and round-trips through recents — but no built-in source ships handler logic for callbacks yet. Custom sources may consume it today by listening for `spotlight:source-callback` in their own Livewire component.
 
 ## Choosing a directive
 

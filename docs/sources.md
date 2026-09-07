@@ -212,7 +212,7 @@ Every result carries a serializable handler directive. The four built-ins:
 - `Handler::url($url, $target)` — navigate to a relative or same-origin URL
 - `Handler::event($name, $payload)` — dispatch a Livewire/JS event
 - `Handler::modal($component, $props)` — open a Livewire modal component
-- `Handler::callback($sourceKey, $id)` — emit `spotlight:source-callback`; v1.1 CommandSource consumes this
+- `Handler::callback($sourceKey, $id)` — emit `spotlight:source-callback` (no built-in source consumes this yet)
 
 Full reference: [handlers.md](handlers.md).
 
