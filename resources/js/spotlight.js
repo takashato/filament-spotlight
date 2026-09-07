@@ -66,6 +66,8 @@ function spotlight() {
         openSubmenuFor: null,
         submenuLoading: false,
         _morphHandler: null,
+        _ignorePointerHighlight: false,
+        _ignorePointerHighlightTimer: null,
 
         get highlightedRowDomId() {
             if (!this.highlightedId) return null;
@@ -95,6 +97,9 @@ function spotlight() {
                 document.removeEventListener('livewire:morphed', this._morphHandler);
                 document.removeEventListener('livewire:update', this._morphHandler);
             }
+            if (this._ignorePointerHighlightTimer) {
+                clearTimeout(this._ignorePointerHighlightTimer);
+            }
         },
 
         open() {
@@ -117,6 +122,11 @@ function spotlight() {
             this.resultsAnnouncement = '';
             this.openSubmenuFor = null;
             this.submenuLoading = false;
+            this._ignorePointerHighlight = false;
+            if (this._ignorePointerHighlightTimer) {
+                clearTimeout(this._ignorePointerHighlightTimer);
+                this._ignorePointerHighlightTimer = null;
+            }
             if (this.previouslyFocused?.focus) {
                 this.previouslyFocused.focus();
             }
@@ -241,9 +251,30 @@ function spotlight() {
             )).filter((el) => el.offsetParent !== null);
         },
 
+        // Pointer highlight must not steal the row when the submenu inserts
+        // under a still cursor, or when focusing an action scrolls the next
+        // row under the mouse. Only real pointer movement should retarget.
+        highlightFromPointer(rowKey) {
+            if (this._ignorePointerHighlight) return;
+            if (this.highlightedId === rowKey) return;
+            this.highlightedId = rowKey;
+        },
+
+        suspendPointerHighlight(ms = 400) {
+            this._ignorePointerHighlight = true;
+            if (this._ignorePointerHighlightTimer) {
+                clearTimeout(this._ignorePointerHighlightTimer);
+            }
+            this._ignorePointerHighlightTimer = setTimeout(() => {
+                this._ignorePointerHighlight = false;
+                this._ignorePointerHighlightTimer = null;
+            }, ms);
+        },
+
         focusFirstSubmenuItem() {
             const items = this.submenuItems();
             if (!items.length) return false;
+            this.suspendPointerHighlight();
             items[0].focus();
             return true;
         },
@@ -257,6 +288,7 @@ function spotlight() {
             const next = current === -1
                 ? (delta > 0 ? 0 : len - 1)
                 : (current + delta + len) % len;
+            this.suspendPointerHighlight();
             items[next].focus();
         },
 
@@ -278,6 +310,7 @@ function spotlight() {
                 // Wrap back to input after last action
                 this.returnFocusToInput();
             } else {
+                this.suspendPointerHighlight();
                 items[next].focus();
             }
         },

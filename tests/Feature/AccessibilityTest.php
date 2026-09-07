@@ -48,6 +48,25 @@ it('marks the modal as a dialog', function (): void {
     expect($view)->toContain('aria-modal="true"');
 });
 
+it('highlights rows from pointer movement, not mouseenter', function (): void {
+    $view = spotlightView('components/result.blade.php');
+
+    // mouseenter fires when the inline action submenu inserts (or when focusing
+    // an action scrolls the next row under a still cursor). That stole the
+    // highlighted row. Highlight must require real pointer movement.
+    expect($view)->not->toContain('x-on:mouseenter');
+    expect($view)->toContain('x-on:mousemove="highlightFromPointer(@js($rowKey))"');
+});
+
+it('suspends pointer highlight while focusing submenu actions', function (): void {
+    $js = (string) file_get_contents(__DIR__.'/../../resources/js/spotlight.js');
+
+    expect($js)->toContain('highlightFromPointer(rowKey)');
+    expect($js)->toContain('suspendPointerHighlight');
+    expect($js)->toContain('this.suspendPointerHighlight()');
+    expect($js)->toContain('if (this._ignorePointerHighlight) return');
+});
+
 it('renders option rows with role=option, stable ids and aria-selected', function (): void {
     $view = spotlightView('components/result.blade.php');
 

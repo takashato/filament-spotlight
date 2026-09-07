@@ -37,7 +37,7 @@
         'directive' => $directive,
         'payload'   => $payload,
     ]))"
-    x-on:mouseenter="highlightedId = @js($rowKey)"
+    x-on:mousemove="highlightFromPointer(@js($rowKey))"
 >
     @if ($result->icon())
         <x-filament::icon :icon="$result->icon()" class="h-4 w-4 flex-none text-gray-400 group-hover:text-gray-500 dark:text-gray-500" />
