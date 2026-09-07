@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Focusing a result's inline action no longer steals the row highlight onto the next record. Row hover now requires real pointer movement (`mousemove`) and keyboard submenu focus briefly ignores pointer highlight.
+
 ## [0.1.0] - 2026-09-07
 
 First public release.
